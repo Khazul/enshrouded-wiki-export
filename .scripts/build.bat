@@ -2,9 +2,9 @@
 @rem Batch script to package mod, deploy mod, and run Enshrouded or emm.exe
 @rem @Author: Khazul
 
-@set deployZip=false
 @set steamAppId=1203620
 
+@set deployZip=false
 @set %action=%1
 if "%action%"=="" set action=export
 
