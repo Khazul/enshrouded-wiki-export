@@ -14,7 +14,7 @@ for /f "delims=" %%a in ('powershell -Command "(get-item '%~f0').Directory.Paren
 for /f "delims=" %%a in ('powershell -Command "$file='%~dp0\..\mod.json'; $json = (Get-Content $file -Raw) | ConvertFrom-Json; $json.version;"') do @set version=%%a
 
 @rem Prepare output folder
-rmdir /S /Q "%~dp0\..\.output"
+rmdir /S /Q "%~dp0\..\.output" >nul 2>&1
 mkdir "%~dp0\..\.output\%name%"
 
 @rem Copy necessary files to output folder
@@ -40,8 +40,8 @@ for /f "delims=" %%A in ('powershell -NoProfile -Command "$j = Get-Content '%~dp
 @rem Deploy to game mods folder
 @rem Get the Steam game path
 for /f "delims=" %%a in ('powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0\Get-SteamGamePath.ps1" -AppID %steamAppId%') do @set "steamGamePath=%%a"
-rmdir /S /Q "%steamGamePath%\Mods\%name%"
-del /F /Q "%steamGamePath%\Mods\%name%-*.zip"
+rmdir /S /Q "%steamGamePath%\Mods\%name%" >nul 2>&1
+del /F /Q "%steamGamePath%\Mods\%name%-*.zip" >nul 2>&1
 
 if "%deployZip%" == "true" (
     @rem Deploy the zip file
@@ -64,13 +64,13 @@ if "%action%"=="export" (
     rmdir /S /Q "%emmexports%"
     mkdir "%emmexports%"
     "%emm%" run -e -g "%steamGamePath%" --export-directory "%emmexports%" --file-name "enshrouded"
-    rmdir /S /Q "%steamGamePath%\Mods\%name%"
-    del /F /Q "%steamGamePath%\Mods\%name%-*.zip"
+    rmdir /S /Q "%steamGamePath%\Mods\%name%" >nul 2>&1
+    del /F /Q "%steamGamePath%\Mods\%name%-*.zip" >nul 2>&1
     goto :eof
 )
 if "%action%"=="patch" (
     "%emm%" run -p -g "%steamGamePath%" --export-directory "%emmexports%" --file-name "enshrouded"
-    rmdir /S /Q "%steamGamePath%\Mods\%name%"
-    del /F /Q "%steamGamePath%\Mods\%name%-*.zip"
+    rmdir /S /Q "%steamGamePath%\Mods\%name%" >nul 2>&1
+    del /F /Q "%steamGamePath%\Mods\%name%-*.zip" >nul 2>&1
     goto :eof
 )
