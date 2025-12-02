@@ -106,7 +106,6 @@ for _, itemRef in ipairs(itemRegistry.itemRefs) do
 			item.debugName = itemData.debugName
 			item.name = translate(itemData.name) or itemData.debugName
 			item.description = translate(itemData.description) or ""
-			print(item.description)
 			item.rarity = itemData.rarity
 			local category = itemData.category
 			if not categories[category] then

@@ -2,7 +2,11 @@
 @rem Batch script to package mod, deploy mod, and run Enshrouded or emm.exe
 @rem @Author: Khazul
 
+@set deployZip=false
 @set steamAppId=1203620
+
+@set %action=%1
+if "%action%"=="" set action=export
 
 @rem Get the mod name from the parent folder
 for /f "delims=" %%a in ('powershell -Command "(get-item '%~f0').Directory.Parent.Name"') do @set name=%%a
@@ -10,7 +14,7 @@ for /f "delims=" %%a in ('powershell -Command "(get-item '%~f0').Directory.Paren
 for /f "delims=" %%a in ('powershell -Command "$file='%~dp0\..\mod.json'; $json = (Get-Content $file -Raw) | ConvertFrom-Json; $json.version;"') do @set version=%%a
 
 @rem Prepare output folder
-rmdir /S /Q "%~dp0\..\.output"
+rmdir /S /Q "%~dp0\..\.output" >nul 2>&1
 mkdir "%~dp0\..\.output\%name%"
 
 @rem Copy necessary files to output folder
@@ -26,20 +30,29 @@ if "%sevenZipExePath%"=="" (
     @echo "7-Zip executable not found. Please ensure 7-Zip is installed."
 ) else (
     @rem uses 7zip as works with factorio whereas compress does not
-    "%sevenZipExePath%" a -tzip -bb0 -bso0 -bsp0 -y -aoa -o"%~dp0\..\.output" "%~dp0\..\.output\%name%-%version%.zip" "%~dp0\..\.output\%name%"
+    "%sevenZipExePath%" a -tzip -bb0 -bso0 -bsp0 -y -aoa -o"%~dp0\..\.output" "%~dp0\..\.output\%name%-%version%.zip" "%~dp0\..\.output\%name%\*" >nul 2>&1
+    @set deployZip=true
 )
+
+@rem Get mod capabilities
+for /f "delims=" %%A in ('powershell -NoProfile -Command "$j = Get-Content '%~dp0\..\mod.json' | ConvertFrom-Json; $c = $j.capabilities; if ($null -eq $c) { '' } else { ($c | Sort-Object) -join ' ' }"') do set "modCapabilities=%%A"
 
 @rem Deploy to game mods folder
 @rem Get the Steam game path
 for /f "delims=" %%a in ('powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0\Get-SteamGamePath.ps1" -AppID %steamAppId%') do @set "steamGamePath=%%a"
 rmdir /S /Q "%steamGamePath%\Mods\%name%"
-xcopy /E /I /Y "%~dp0\..\.output\%name%" "%steamGamePath%\Mods\%name%"
+del /F /Q "%steamGamePath%\Mods\%name%-%version%.zip" >nul 2>&1
 
-@rem Get mod capabilities
-for /f "delims=" %%A in ('powershell -NoProfile -Command "$j = Get-Content '%~dp0\..\mod.json' | ConvertFrom-Json; $c = $j.capabilities; if ($null -eq $c) { '' } else { ($c | Sort-Object) -join ' ' }"') do set "modCapabilities=%%A"
+if "%deployZip%" == "true" (
+    @rem Deploy the zip file
+    copy /Y "%~dp0\..\.output\%name%-%version%.zip" "%steamGamePath%\Mods" >nul 2>&1
+) else (
+    @rem Deploy the unzipped mod folder
+    xcopy /E /I /Y "%~dp0\..\.output\%name%" "%steamGamePath%\Mods\%name%"
+)
 
 @rem Run command - start enshroud with mod
-if "%1"=="run" (
+if "%action%"=="run" (
     for /f "delims=" %%a in ('powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0\Get-SteamExePath.ps1"') do @set "steamExePath=%%a"
     @echo start "" "%steamExePath%" -applaunch %steamAppId%
     goto :eof
@@ -47,15 +60,15 @@ if "%1"=="run" (
 @rem export and patching commands - run emm.exe
 set "emm=%~dp0\emm.exe"
 set "emmexports=%~dp0\..\.exports"
-if "%1"=="export" (
+if "%action%"=="export" (
     rmdir /S /Q "%emmexports%"
     mkdir "%emmexports%"
     "%emm%" run -e -g "%steamGamePath%" --export-directory "%emmexports%" --file-name "enshrouded"
-    rmdir /S /Q "%steamGamePath%\Mods\%name%"
+    @rem rmdir /S /Q "%steamGamePath%\Mods\%name%"
     goto :eof
 )
-if "%1"=="patch" (
+if "%action%"=="patch" (
     "%emm%" run -p -g "%steamGamePath%" --export-directory "%emmexports%" --file-name "enshrouded"
-    rmdir /S /Q "%steamGamePath%\Mods\%name%"
+    @rem rmdir /S /Q "%steamGamePath%\Mods\%name%"
     goto :eof
 )
