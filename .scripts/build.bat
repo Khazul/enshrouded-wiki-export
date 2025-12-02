@@ -41,7 +41,7 @@ for /f "delims=" %%A in ('powershell -NoProfile -Command "$j = Get-Content '%~dp
 @rem Get the Steam game path
 for /f "delims=" %%a in ('powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0\Get-SteamGamePath.ps1" -AppID %steamAppId%') do @set "steamGamePath=%%a"
 rmdir /S /Q "%steamGamePath%\Mods\%name%"
-del /F /Q "%steamGamePath%\Mods\%name%-%version%.zip" >nul 2>&1
+del /F /Q "%steamGamePath%\Mods\%name%-*.zip" >nul 2>&1
 
 if "%deployZip%" == "true" (
     @rem Deploy the zip file
