@@ -1,0 +1,62 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Deploy and Run Enshrouded",
+            "type": "shell",
+            "command": "${workspaceFolder}\\.scripts\\build.bat",
+            "args": [
+                "run"
+            ],
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "Deploy and Export from Enshrouded",
+            "type": "shell",
+            "command": "${workspaceFolder}\\.scripts\\build.bat",
+            "args": [
+                "export"
+            ],
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "Deploy and Patch from Enshrouded",
+            "type": "shell",
+            "command": "${workspaceFolder}\\.scripts\\build.bat",
+            "args": [
+                "patch"
+            ],
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            }
+        }
+    ]
+}

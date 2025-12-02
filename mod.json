@@ -1,0 +1,15 @@
+{
+  "id": "Khazul-Exports",
+  "name": "Khazul-Exports",
+  "version": "0.1.0",
+  "capabilities": [
+    "export"
+  ],
+  "dependencies": [],
+  "authors": [
+    "Khazul"
+  ],
+  "description": null,
+  "license": null,
+  "icon": null
+}
