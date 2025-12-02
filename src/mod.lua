@@ -54,9 +54,36 @@ local function extractBlockSetup(blockSetup, item)
 	end
 end	
 
-local function extractEquipmentSlot(equipment, item)
-	if equipment then
-		item.slot = equipment.slot
+local function extractBuff(appliedBuff, item)
+	if appliedBuff then
+		print("  Buff" .. appliedBuff)
+		local buffInfo = game.assets.get_resource(appliedBuff, "keen::BuffType")
+		if buffInfo then
+			---@type keen.BuffType
+			local buffData = buffInfo.data
+			item.buff = { __type = "object" }
+			item.buff._guid = appliedBuff
+			item.buff.typeId = buffData.buffTypeId.value
+			item.buff.slot = buffData.slot
+			item.buff.name = translations.translateGuid(buffData.name)
+			item.buff.desc = translations.translateGuid(buffData.description)
+			item.buff.applyType = buffData.applyType
+			item.buff.defaultLifetime = buffData.defaultLifeTime.value
+		end
+	end
+end	
+
+local function extractDebuff(appliedBuff, item)
+end	
+
+local function extractStackSize(itemData, item)
+end
+
+local function extractEquipmentSetup(equipmentSetup, item)
+	if equipmentSetup then
+		item.slot = equipmentSetup.slot
+		extractBuff(equipmentSetup.appliedBuff, item)
+		extractDebuff(equipmentSetup.appliedDebuff, item)
 	end
 end
 
@@ -96,7 +123,7 @@ local function extractWeapons(itemData, item)
 
 	extractDamageSetup(itemData.damageSetup, item)
 	extractArmorSetup(itemData.armorSetup, item)
-	extractEquipmentSlot(itemData.equipment, item)
+	extractEquipmentSetup(itemData.equipment, item)
 
 	item.perks = {}
 	for _, perkId in ipairs(itemData.perkReferences) do
@@ -119,11 +146,14 @@ local function extractAmmunition(itemData, item)
 end
 
 local function extractEquipment(itemData, item)
-	extractEquipmentSlot(itemData.equipment, item)
+	extractEquipmentSetup(itemData.equipment, item)
 	extractArmorSetup(itemData.armorSetup, item)
 	extractBlockSetup(itemData.blockSetup, item)
 end
 
+local function extractConsumables(itemData, item)
+	extractEquipmentSetup(itemData.equipment, item)
+end
 
 local categories = {}
 
@@ -143,7 +173,7 @@ for _, itemRef in ipairs(itemRegistry.itemRefs) do
 		local itemData = itemInfo.data
 
 		if itemData then
-			--print("Processing: " .. itemData.debugName)
+			print("Processing: " .. itemData.debugName)
 
 			item._id = itemData.itemId.value
 			item._guid = itemData.objectId
@@ -156,9 +186,6 @@ for _, itemRef in ipairs(itemRegistry.itemRefs) do
 				categories[item.category] = {}
 			end
 			table.insert(categories[item.category], item)
-			-- local stackSize = data.maxStackSize
-			-- data.appliedBuff
-			-- data.appiedDebuff
 
 			extractUiValues(itemData.uiValues, item)
 			extractLevelRange(itemData.itemLevelRange, item)
@@ -169,6 +196,8 @@ for _, itemRef in ipairs(itemRegistry.itemRefs) do
 				extractAmmunition(itemData, item)
 			elseif item.category == "Equipment" then
 				extractEquipment(itemData, item)
+			elseif item.category == "Consumables" then
+				extractConsumables(itemData, item)
 			end
 		end
 	end
