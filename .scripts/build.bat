@@ -6,7 +6,6 @@
 
 @set deployZip=false
 @set %action=%1
-if "%action%"=="" set action=export
 
 @rem Get the mod name from the parent folder
 for /f "delims=" %%a in ('powershell -Command "(get-item '%~f0').Directory.Parent.Name"') do @set name=%%a
@@ -36,6 +35,9 @@ if "%sevenZipExePath%"=="" (
 
 @rem Get mod capabilities
 for /f "delims=" %%A in ('powershell -NoProfile -Command "$j = Get-Content '%~dp0\..\mod.json' | ConvertFrom-Json; $c = $j.capabilities; if ($null -eq $c) { '' } else { ($c | Sort-Object) -join ' ' }"') do set "modCapabilities=%%A"
+@rem auto set the action if not based on mod capabilities
+if "%modCapabilities%-%action%"=="export-" set action=export
+if "%modCapabilities%-%action%"=="patch-" set action=patch
 
 @rem Deploy to game mods folder
 @rem Get the Steam game path
