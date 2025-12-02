@@ -15,8 +15,14 @@ $libraries = @{}
 $current = ""
 
 foreach ($line in Get-Content $vdfPath) {
-    if ($line -match '"(\d+)"\s*\{') { $current = $matches[1] }
-    if ($line -match '"path"\s*"(.+)"') { $libraries[$current] = $matches[1] }
+    if ($line -match '"(\d+)"(\s*\{)?') 
+    {
+         $current = $matches[1] 
+    }
+    if ($line -match '"path"\s*"(.+)"') 
+    { 
+        $libraries[$current] = $matches[1] 
+    }
 }
 
 foreach ($lib in $libraries.Values) {
