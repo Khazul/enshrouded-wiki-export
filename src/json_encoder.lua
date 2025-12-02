@@ -20,7 +20,7 @@ local function escape_json_string(s)
     return "\"" .. s .. "\""
 end
 
-local function encode_value(v, indent, level)
+local function encode_value(v, indent, level, hidePrefix)
     local t = type(v)
 
     if t == "string" then
@@ -28,7 +28,7 @@ local function encode_value(v, indent, level)
     elseif t == "number" or t == "boolean" then
         return tostring(v)
     elseif t == "table" then
-        return encode_table(v, indent, level)
+        return encode_table(v, indent, level, hidePrefix)
     elseif t == "nil" then
         return "null"
     else
@@ -37,13 +37,13 @@ local function encode_value(v, indent, level)
 end
 
 -- Forward declaration
-function encode_table(tbl, indent, level)
+function encode_table(tbl, indent, level, hidePrefix)
     local isObject = (tbl.__type == "object")
 
     -- Remove "__type" and any "__something"
     local items = {}
     for k, v in pairs(tbl) do
-        if type(k) == "string" and k:sub(1, 2) == "__" then
+        if type(k) == "string" and k:sub(1, #hidePrefix) == hidePrefix then
             -- skip private/internal fields
         else
             items[#items + 1] = { key = k, value = v }
@@ -64,7 +64,7 @@ function encode_table(tbl, indent, level)
         local out = "{\n"
         for i, kv in ipairs(items) do
             local k = tostring(kv.key)
-            local v = encode_value(kv.value, indent, nextLevel)
+            local v = encode_value(kv.value, indent, nextLevel, hidePrefix)
             out = out .. prefix .. string.format("%q: %s", k, v)
             if i < #items then out = out .. sep end
         end
@@ -73,7 +73,7 @@ function encode_table(tbl, indent, level)
         -- JSON array
         local out = "[\n"
         for i, kv in ipairs(items) do
-            local v = encode_value(kv.value, indent, nextLevel)
+            local v = encode_value(kv.value, indent, nextLevel, hidePrefix)
             out = out .. prefix .. v
             if i < #items then out = out .. sep end
         end
@@ -81,8 +81,12 @@ function encode_table(tbl, indent, level)
     end
 end
 
-function jsonEnc.encode(tbl, indent)
-    return encode_table(tbl, indent or "  ", 0)
+function jsonEnc.encode(tbl, inden, hide_)
+    local hidePrefix = "__"
+    if hide_ == true then 
+        hidePrefix = "_" 
+    end
+    return encode_table(tbl, indent or "  ", 0, hidePrefix)
 end
 
 return jsonEnc
