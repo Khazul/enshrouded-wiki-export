@@ -5,6 +5,26 @@ if not loader.features.export then
 	return
 end
 
+local function exportIcon(icon, filename)
+	if icon then
+		local content = game.assets.get_content(icon.texture.data)
+		local buf = content:read_data()
+		local textureImage = image.decode_texture(buf, icon.texture.format, icon.texture.size.x, icon.texture.size.y)
+		local pngBuffer = image.encode(textureImage, "png")
+		local fullname = filename .. ".png"
+		io.export("images\\" .. fullname, pngBuffer)
+		return fullname
+	end
+	return nil
+end
+
+local function exportRenderedIcon()
+end
+
+local function cleanFilename(filename)
+	return string.gsub(filename, "[%s%(%)%'%`_]+", "")
+end
+
 local function extractDamageDistribution(damageDistribution, item)
 	item.damage = { __type = "object" }
 	item.materialDamage = { __type = "object" }
@@ -56,7 +76,6 @@ end
 
 local function extractBuff(appliedBuff, item)
 	if appliedBuff then
-		print("  Buff" .. appliedBuff)
 		local buffInfo = game.assets.get_resource(appliedBuff, "keen::BuffType")
 		if buffInfo then
 			---@type keen.BuffType
@@ -68,7 +87,8 @@ local function extractBuff(appliedBuff, item)
 			item.buff.name = translations.translateGuid(buffData.name)
 			item.buff.desc = translations.translateGuid(buffData.description)
 			item.buff.applyType = buffData.applyType
-			item.buff.defaultLifetime = buffData.defaultLifeTime.value
+			item.buff.defaultLifetime = math.tointeger(buffData.defaultLifeTime.value / 1000000)
+			item.buff.icon = exportIcon(buffData.icon, cleanFilename(item.name))
 		end
 	end
 end	
@@ -157,7 +177,6 @@ end
 
 local categories = {}
 
-
 ---@type keen.ItemRegistryResource
 local itemRegistry = game.assets.get_resources_by_type("keen::ItemRegistryResource")[1].data
 
@@ -173,7 +192,7 @@ for _, itemRef in ipairs(itemRegistry.itemRefs) do
 		local itemData = itemInfo.data
 
 		if itemData then
-			print("Processing: " .. itemData.debugName)
+			-- print("Processing: " .. itemData.debugName)
 
 			item._id = itemData.itemId.value
 			item._guid = itemData.objectId
@@ -231,6 +250,8 @@ for _, perkRef in ipairs(perkRegistry.perks) do
 
 		extractDamageSetup(perkData.damageSetup, perkEntry)
 		extractArmorSetup(perkData.armorSetup, perkEntry)
+
+		perkEntry.icon = exportIcon(perkData.icon, cleanFilename(perkEntry.debugName))
 
 		table.insert(perks, perkEntry)
 	end

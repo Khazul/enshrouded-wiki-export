@@ -86,6 +86,7 @@ function translations.translateHash(hash)
 end
 
 function translations.export(filename)
+	print("exporting translations")
     csv = "Key,US_Translation,Default_Translation\n"
     if translations.usTranslations == nil then
         translations.usTranslations = get_translations("En_Us")
