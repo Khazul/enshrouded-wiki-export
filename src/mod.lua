@@ -25,44 +25,62 @@ local function cleanFilename(filename)
 end
 
 local function extractDamageDistribution(damageDistribution, item)
-	item.damage = { __type = "object" }
-	item.materialDamage = { __type = "object" }
-	item.otherDamage = { __type = "object" }
-	for t, a in pairs(damageDistribution) do
-		if t == "woodDamage" or t == "stoneDamage" or t == "metalDamage" then
-			if a > 0 then
-				item.materialDamage[t] = a
+	if damageDistribution then
+		local damage = { __type = "object" }
+		local materialDamage = { __type = "object" }
+		local otherDamage = { __type = "object" }
+		for t, a in pairs(damageDistribution) do
+			if t == "woodDamage" or t == "stoneDamage" or t == "metalDamage" then
+				if a > 0 then
+					materialDamage[t] = a
+				end
+			elseif t == "healing" or t == "explosionDamage" then
+				if a > 0 then
+					otherDamage[t] = a
+				end
+			else
+				if a > 0 then
+					damage[t] = a
+				end
 			end
-		elseif t == "healing" or t == "explosionDamage" then
-			if a > 0 then
-				item.otherDamage[t] = a
-			end
-		else
-			if a > 0 then
-				item.damage[t] = a
-			end
+		end
+		if table.count(damage) > 1 then
+			item.damage = damage
+		end
+		if table.count(materialDamage) > 1 then
+			item.materialDamage = materialDamage
+		end
+		if table.count(damage) > 1 then
+			item.otherDamage = otherDamage
 		end
 	end
 end
 
-local function extractDamageSetup(damageSetup, item)
+local function extractDamageSetup(damageSetup, item, mods)
 	if damageSetup then
-		item.dmgMod = damageSetup.dmgMod
-		item.speedMod = damageSetup.speedMod
+		if mods then
+			item.dmgMod = damageSetup.dmgMod
+			item.speedMod = damageSetup.speedMod
+		end
 		if (damageSetup.isSet) then
 			extractDamageDistribution(damageSetup.distribution, item)
 		end
 	end
 end
 
-local function extractArmorSetup(armorSetup, item)
+local function extractArmorSetup(armorSetup, item, mods)
 	if armorSetup and armorSetup.isSet then
-		item.armor = { __type = "object" }
-		item.armorQuality = armorSetup.quality
+		local armor = { __type = "object" }
+		if mods then
+			item.armorQuality = armorSetup.quality
+		end
 		for t, a in pairs(armorSetup.distribution) do
 			if a > 0 then
-				item.armor[t] = a
+				armor[t] = a
 			end
+		end
+		if table.count(armor) > 1 then
+			item.armor = armor
 		end
 	end
 end
@@ -118,7 +136,31 @@ local function extractUiValues(uiValues, item)
 		item.uiValues = {}
 		for _, value in ipairs(uiValues) do
 			local text = translations.translateHash(value.locaId.value)
-			table.insert(item.uiValues, { __type = "object", _id = value.locaId.value, text = text, format = value.valueFormat, value = value.value })
+			local v = value.value
+			if value.valueFormat == "Duration" then
+				v = v / 1000
+			end
+			table.insert(item.uiValues, { __type = "object", _id = value.locaId.value, text = text, format = value.valueFormat, value = v })
+		end
+	end
+end
+
+local function extractImpactValues(impactValues, item)
+	if impactValues then
+		item.impactValues = {}
+		for _, value in pairs(impactValues) do
+			local locaTag = translations.translateGuid(value.value.locaTag) or ""
+			if locaTag and locaTag ~= "" then
+				local v = value.value.value
+				local type = type(v)
+				if type == "userdata" then
+					v = v.value
+					if value.value.type.value == 3756319748 then -- Seems to be a duration struct in ns
+						v = v / 1000000000
+					end
+				end
+				table.insert(item.impactValues, { __type = "object", _id = value.value.id, locaTag = locaTag, value = v, format = value.value.valueFormat, _luaType = type, _type = value.value.type.value })
+			end
 		end
 	end
 end
@@ -127,6 +169,7 @@ local function extractWeapons(itemData, item)
 	item.genRarity = itemData.generateRarity
 	item.disableRarityGeneration = itemData.disableRarityGeneration
 
+	--[=====[
 	for _, value in pairs(itemData.impactValues) do
 		if value.value.type.value == 3902764048 and value.value.valueFormat == "Duration" then
 			local locaTag = translations.translateGuid(value.value.locaTag) or "?"
@@ -139,9 +182,10 @@ local function extractWeapons(itemData, item)
 			end
 		end
 	end
+	--]=====]
 
-	extractDamageSetup(itemData.damageSetup, item)
-	extractArmorSetup(itemData.armorSetup, item)
+	extractDamageSetup(itemData.damageSetup, item, true)
+	extractArmorSetup(itemData.armorSetup, item, true)
 	extractEquipmentSetup(itemData.equipment, item)
 
 	item.perks = {}
@@ -166,7 +210,7 @@ end
 
 local function extractEquipment(itemData, item)
 	extractEquipmentSetup(itemData.equipment, item)
-	extractArmorSetup(itemData.armorSetup, item)
+	extractArmorSetup(itemData.armorSetup, item, true)
 	extractBlockSetup(itemData.blockSetup, item)
 end
 
@@ -215,6 +259,7 @@ for _, itemRef in pairs(itemRegistry.itemRefs) do
 
 			extractUiValues(itemData.uiValues, item)
 			extractLevelRange(itemData.itemLevelRange, item)
+			extractImpactValues(itemData.impactValues, item)
 
 			if item.category == "Weapons" then
 				extractWeapons(itemData, item)
@@ -257,8 +302,9 @@ for _, perkRef in ipairs(perkRegistry.perks) do
 			perkEntry.description = ""
 		end
 
-		extractDamageSetup(perkData.damageSetup, perkEntry)
-		extractArmorSetup(perkData.armorSetup, perkEntry)
+		extractDamageSetup(perkData.damageModifier, perkEntry)
+		extractArmorSetup(perkData.perkArmorSetup, perkEntry)
+		extractImpactValues(perkData.impactValues, perkEntry)
 
 		perkEntry.icon = exportIconTexture(perkData.icon.texture, "perks\\" .. cleanFilename(perkEntry.debugName))
 
