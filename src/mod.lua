@@ -5,24 +5,23 @@ if not loader.features.export then
 	return
 end
 
-local function exportIcon(icon, filename)
-	if icon then
-		local content = game.assets.get_content(icon.texture.data)
-		local buf = content:read_data()
-		local textureImage = image.decode_texture(buf, icon.texture.format, icon.texture.size.x, icon.texture.size.y)
-		local pngBuffer = image.encode(textureImage, "png")
-		local fullname = filename .. ".png"
-		io.export("images\\" .. fullname, pngBuffer)
-		return fullname
+local function exportIconTexture(texture, filename)
+	if texture then
+		local content = game.assets.get_content(texture.data)
+		if content then
+			local buf = content:read_data()
+			local textureImage = image.decode_texture(buf, texture.format, texture.size.x, texture.size.y)
+			local pngBuffer = image.encode(textureImage, "png")
+			local path = "icons\\" .. filename .. ".png"
+			io.export(path, pngBuffer)
+			return path
+		end
 	end
 	return nil
 end
 
-local function exportRenderedIcon()
-end
-
 local function cleanFilename(filename)
-	return string.gsub(filename, "[%s%(%)%'%`_]+", "")
+	return string.gsub(filename, "[%s%(%)\"%[%]%'%`_<>%*\\/]+", "")
 end
 
 local function extractDamageDistribution(damageDistribution, item)
@@ -88,7 +87,7 @@ local function extractBuff(appliedBuff, item)
 			item.buff.desc = translations.translateGuid(buffData.description)
 			item.buff.applyType = buffData.applyType
 			item.buff.defaultLifetime = math.tointeger(buffData.defaultLifeTime.value / 1000000)
-			item.buff.icon = exportIcon(buffData.icon, cleanFilename(item.name))
+			item.buff.icon = exportIconTexture(buffData.icon.texture, "buffs\\" .. cleanFilename(item.name))
 		end
 	end
 end	
@@ -177,10 +176,18 @@ end
 
 local categories = {}
 
+
+local iconInfo = {}
+---@type keen.ItemIconRegistryResource
+local iconRegistry = game.assets.get_resource("3064d35d-7342-40ca-bdc9-aad58f83bf45", "keen::ItemIconRegistryResource").data
+for _, icon in pairs(iconRegistry.icons) do
+	iconInfo[icon.guid] = icon.uiTexture
+end
+
 ---@type keen.ItemRegistryResource
 local itemRegistry = game.assets.get_resources_by_type("keen::ItemRegistryResource")[1].data
 
-for _, itemRef in ipairs(itemRegistry.itemRefs) do
+for _, itemRef in pairs(itemRegistry.itemRefs) do
 	local itemInfo = game.assets.get_resource(itemRef, "keen::ItemInfo")
 
 	if not itemInfo then
@@ -218,6 +225,8 @@ for _, itemRef in ipairs(itemRegistry.itemRefs) do
 			elseif item.category == "Consumables" then
 				extractConsumables(itemData, item)
 			end
+
+			item.icon = exportIconTexture(iconInfo[itemData.objectId], string.lower(item.category) .. "\\" .. cleanFilename(item.name))
 		end
 	end
 end
@@ -251,7 +260,7 @@ for _, perkRef in ipairs(perkRegistry.perks) do
 		extractDamageSetup(perkData.damageSetup, perkEntry)
 		extractArmorSetup(perkData.armorSetup, perkEntry)
 
-		perkEntry.icon = exportIcon(perkData.icon, cleanFilename(perkEntry.debugName))
+		perkEntry.icon = exportIconTexture(perkData.icon.texture, "perks\\" .. cleanFilename(perkEntry.debugName))
 
 		table.insert(perks, perkEntry)
 	end
@@ -263,7 +272,7 @@ for category, items in pairs(categories) do
 	print(string.format('exporting category "%s"', category))
 	local json = jsonEnc.encode(items, "  ", false)
 	local filename = string.format("%s.json", category:lower())
-	io.export(filename, json)
+	io.export("json\\" .. string.lower(cleanFilename(filename)), json)
 end
 
 translations.export("translations.csv")
