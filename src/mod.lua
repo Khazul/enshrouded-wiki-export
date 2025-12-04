@@ -315,6 +315,7 @@ local function extractPerks()
 			local perkEntry = {
 				__type = "object",
 				_guid = perkRef,
+				category = "Perks",
 				debugName = perkData.debugName,
 				name = translations.translateGuid(perkData.name) or perkData.debugName
 			}
