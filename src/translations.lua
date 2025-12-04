@@ -60,7 +60,7 @@ local function get_translations(locale)
 	return dict
 end
 
-function translations.translateGuid(id)
+local function ensureTranslationsLoaded()
     if translations.usTranslations == nil then
         translations.usTranslations = get_translations("En_Us")
     end
@@ -68,33 +68,27 @@ function translations.translateGuid(id)
     if translations.defaultTranslations == nil then
         translations.defaultTranslations = get_translations()
     end
+end
 
-    local hash = game.guid.hash(id)
+function translations.translateGuid(id)
+	ensureTranslationsLoaded()
+
+	local hash = game.guid.hash(id)
     return translations.usTranslations[hash] or translations.defaultTranslations[hash]
 end
 
 function translations.translateHash(hash)
-    if translations.usTranslations == nil then
-        translations.usTranslations = get_translations("En_Us")
-    end
+	ensureTranslationsLoaded()
 
-    if translations.defaultTranslations == nil then
-        translations.defaultTranslations = get_translations()
-    end
-
-    return translations.usTranslations[hash] or translations.defaultTranslations[hash]
+	return translations.usTranslations[hash] or translations.defaultTranslations[hash]
 end
 
 function translations.export(filename)
+	ensureTranslationsLoaded()
+
 	print("exporting translations")
     csv = "Key,US_Translation,Default_Translation\n"
-    if translations.usTranslations == nil then
-        translations.usTranslations = get_translations("En_Us")
-    end
-    if translations.defaultTranslations == nil then
-        translations.defaultTranslations = get_translations()
-    end
-    local allKeys = {}
+	local allKeys = {}
     for k, _ in pairs(translations.usTranslations) do
         allKeys[k] = true
     end

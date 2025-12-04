@@ -20,7 +20,7 @@ local function escape_json_string(s)
     return "\"" .. s .. "\""
 end
 
-local function encode_value(v, indent, level, hidePrefix)
+local function encode_value(k, v, indent, level, hidePrefix)
     local t = type(v)
 
     if t == "string" then
@@ -32,7 +32,7 @@ local function encode_value(v, indent, level, hidePrefix)
     elseif t == "nil" then
         return "null"
     else
-        error("Unsupported type in JSON: " .. t)
+        error("Unsupported type in JSON: " .. t .. " = " .. k)
     end
 end
 
@@ -64,7 +64,7 @@ function encode_table(tbl, indent, level, hidePrefix)
         local out = "{\n"
         for i, kv in ipairs(items) do
             local k = tostring(kv.key)
-            local v = encode_value(kv.value, indent, nextLevel, hidePrefix)
+            local v = encode_value(kv.key, kv.value, indent, nextLevel, hidePrefix)
             out = out .. prefix .. string.format("%q: %s", k, v)
             if i < #items then out = out .. sep end
         end
@@ -73,7 +73,7 @@ function encode_table(tbl, indent, level, hidePrefix)
         -- JSON array
         local out = "[\n"
         for i, kv in ipairs(items) do
-            local v = encode_value(kv.value, indent, nextLevel, hidePrefix)
+            local v = encode_value(kv.key, kv.value, indent, nextLevel, hidePrefix)
             out = out .. prefix .. v
             if i < #items then out = out .. sep end
         end
