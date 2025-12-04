@@ -2,6 +2,8 @@ require("table")
 local jsonEnc = require("json_encoder")
 local translations = require("translations")
 
+local hide_prefixed = false
+
 if not loader.features.export then
 	return
 end
@@ -534,7 +536,7 @@ local function exportCategories()
 	-- Export categories to JSON files
 	for category, items in pairs(categories) do
 		print(string.format('exporting category "%s"', category))
-		local json = jsonEnc.encode(items, "  ", false)
+		local json = jsonEnc.encode(items, "  ", hide_prefixed)
 		local filename = string.format("%s.json", category:lower())
 		io.export("json\\" .. string.lower(cleanFilename(filename)), json)
 	end

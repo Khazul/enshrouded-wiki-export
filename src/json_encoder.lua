@@ -6,82 +6,108 @@ local jsonEnc = {}
 --  * indentation + pretty output
 
 local function escape_json_string(s)
-    s = s:gsub("\\", "\\\\")
-         :gsub("\"", "\\\"")
-         :gsub("\n", "\\n")
-         :gsub("\r", "\\r")
-         :gsub("\t", "\\t")
-
-    -- Escape control characters (0x00–0x1F)
-    s = s:gsub("[%z\1-\31]", function(c)
-        return string.format("\\u%04x", string.byte(c))
-    end)
-
-    return "\"" .. s .. "\""
+    return s
+        :gsub("\\", "\\\\")
+        :gsub("\"", "\\\"")
+        :gsub("\b", "\\b")
+        :gsub("\f", "\\f")
+        :gsub("\n", "\\n")
+        :gsub("\r", "\\r")
+        :gsub("\t", "\\t")
 end
 
-local function encode_value(k, v, indent, level, hidePrefix)
+local function is_array(tbl)
+    -- Arrays NEVER have __type = "object"
+    if tbl.__type == "object" then
+        return false
+    end
+
+    -- Sequential integer keys? (1..n)
+    local count = 0
+    for k in pairs(tbl) do
+        if type(k) == "number" and k > 0 and math.floor(k) == k then
+            count = count + 1
+        else
+            return false
+        end
+    end
+
+    -- Must have all indexes 1..count
+    for i = 1, count do
+        if tbl[i] == nil then return false end
+    end
+
+    return true
+end
+
+local function encode_value(v, indent, level, hidePrefix)
     local t = type(v)
 
     if t == "string" then
-        return escape_json_string(v)
+        return '"' .. escape_json_string(v) .. '"'
     elseif t == "number" or t == "boolean" then
         return tostring(v)
-    elseif t == "table" then
-        return encode_table(v, indent, level, hidePrefix)
     elseif t == "nil" then
         return "null"
+    elseif t == "table" then
+        return encode_table(v, indent, level, hidePrefix)
     else
-        error("Unsupported type in JSON: " .. t .. " = " .. k)
+        error("Unsupported JSON type: " .. t)
     end
 end
 
 -- Forward declaration
 function encode_table(tbl, indent, level, hidePrefix)
-    local isObject = (tbl.__type == "object")
 
-    -- Remove "__type" and any "__something"
-    local items = {}
-    for k, v in pairs(tbl) do
+    indent = indent or "  "
+    level = level or 0
+
+    local pad = string.rep(indent, level)
+    local pad_inner = string.rep(indent, level + 1)
+
+    -- JSON ARRAY
+    if is_array(tbl) then
+        local parts = {}
+        for i = 1, #tbl do
+            table.insert(parts, pad_inner .. encode_value(tbl[i], indent, level + 1, hidePrefix))
+        end
+
+        if #parts == 0 then
+            return "[]"
+        end
+
+        return "[\n" .. table.concat(parts, ",\n") .. "\n" .. pad .. "]"
+    end
+
+    -- JSON OBJECT
+    local keys = {}
+    for k, _ in pairs(tbl) do
         if type(k) == "string" and k:sub(1, #hidePrefix) == hidePrefix then
             -- skip private/internal fields
         else
-            items[#items + 1] = { key = k, value = v }
+            table.insert(keys, k)
         end
     end
 
-    -- Empty table case
-    if #items == 0 then
-        return isObject and "{}" or "[]"
+    table.sort(keys)
+
+    local parts = {}
+    for _, k in ipairs(keys) do
+        local v = tbl[k]
+        table.insert(
+            parts,
+            pad_inner .. '"' .. escape_json_string(k) .. '": ' .. encode_value(v, indent, level + 1, hidePrefix)
+        )
     end
 
-    local nextLevel = level + 1
-    local prefix = string.rep(indent, nextLevel)
-    local sep = ",\n"
-
-    if isObject then
-        -- JSON object
-        local out = "{\n"
-        for i, kv in ipairs(items) do
-            local k = tostring(kv.key)
-            local v = encode_value(kv.key, kv.value, indent, nextLevel, hidePrefix)
-            out = out .. prefix .. string.format("%q: %s", k, v)
-            if i < #items then out = out .. sep end
-        end
-        return out .. "\n" .. string.rep(indent, level) .. "}"
-    else
-        -- JSON array
-        local out = "[\n"
-        for i, kv in ipairs(items) do
-            local v = encode_value(kv.key, kv.value, indent, nextLevel, hidePrefix)
-            out = out .. prefix .. v
-            if i < #items then out = out .. sep end
-        end
-        return out .. "\n" .. string.rep(indent, level) .. "]"
+    if #parts == 0 then
+        return "{}"
     end
+
+    return "{\n" .. table.concat(parts, ",\n") .. "\n" .. pad .. "}"
 end
 
-function jsonEnc.encode(tbl, inden, hide_)
+function jsonEnc.encode(tbl, indent, hide_)
     local hidePrefix = "__"
     if hide_ == true then 
         hidePrefix = "_" 
