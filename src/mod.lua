@@ -157,10 +157,10 @@ local function extractUiValues(uiValues, item)
 	end
 end
 
-local function extractImpactValues(impactValues, item)
-	if impactValues then
-		item._impactValues = {}
-		for _, value in pairs(impactValues) do
+local function extractImpactValues(impactValuesData, item, debug)
+	if impactValuesData then
+		local impactValues = {}
+		for _, value in pairs(impactValuesData) do
 			local locaTag = translations.translateGuid(value.value.locaTag) or ""
 			if locaTag and locaTag ~= "" then
 				local v = value.value.value
@@ -171,8 +171,13 @@ local function extractImpactValues(impactValues, item)
 						v = v / 1000000000
 					end
 				end
-				table.insert(item._impactValues, { __type = "object", _id = value.value.id, locaTag = locaTag, value = v, format = value.value.valueFormat, _luaType = type, _type = value.value.type.value })
+				table.insert(impactValues, { __type = "object", _id = value.value.id, locaTag = locaTag, value = v, format = value.value.valueFormat, _luaType = type, _type = value.value.type.value })
 			end
+		end
+		if debug then
+			item._impactValues = impactValues
+		else
+			item.impactValues = impactValues
 		end
 	end
 end
@@ -258,7 +263,7 @@ local function extractItem(itemRef)
 
 			extractUiValues(itemData.uiValues, item)
 			extractLevelRange(itemData.itemLevelRange, item)
-			extractImpactValues(itemData.impactValues, item)
+			extractImpactValues(itemData.impactValues, item, true)
 
 			if item.category == "Weapons" then
 				extractWeapons(itemData, item)
@@ -327,7 +332,7 @@ local function extractPerks()
 
 			extractDamageSetup(perkData.damageModifier, perkEntry)
 			extractArmorSetup(perkData.perkArmorSetup, perkEntry)
-			extractImpactValues(perkData.impactValues, perkEntry)
+			extractImpactValues(perkData.impactValues, perkEntry, false)
 
 			perkEntry.icon = exportIconTexture(perkData.icon.texture, "perks\\" .. cleanFilename(perkEntry.debugName))
 
